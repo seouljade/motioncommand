@@ -25,7 +25,7 @@
     <nav class="nav" aria-label="화면 이동">
       <a href="#intro" data-route="intro"><i>1</i>체계 소개</a>
       <a href="#setup" data-route="setup"><i>2</i>환경설정·조작법</a>
-      <a href="#sim" data-route="sim"><i>3</i>조작 시뮬레이션</a>
+      <a href="#sim" data-route="sim" class="nav-key"><i>3</i>조작 시뮬레이션<em>핵심</em></a>
       <a href="#review" data-route="review"><i>4</i>사후검토</a>
       <a href="#learn" data-route="learn"><i>5</i>관련 정보</a>
       <a href="#maker" data-route="maker"><i>6</i>제작자</a>
@@ -39,14 +39,15 @@
 <section class="page" id="p-intro" data-page="intro">
   <div class="hero wrap">
     <div class="hero-copy">
-      <p class="eyebrow">Army TIGER+ · Physical AI · 유무인복합전투</p>
-      <h1>손짓 하나로<br>드론을 지휘한다</h1>
+      <p class="eyebrow">Army TIGER+ · Physical AI · 유무인복합전투체계</p>
+      <h1>손짓 하나로<br>드론을 지휘한다!</h1>
       <p class="lead">MotionCommand는 카메라로 손 수신호를 인식해 드론을 조종하는 제스처 기반 통제 체계입니다. 실기체 없이 3D 시뮬레이션으로 훈련하고, 조작 기록으로 잘못된 습관을 사후검토합니다.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#sim">지금 체험하기</a>
         <a class="btn" href="#setup">수신호 7종 보기</a>
       </div>
       <p class="hint">카메라가 없어도 화면 버튼이나 키보드로 바로 체험할 수 있습니다.</p>
+      <p class="sim-only"><b>시뮬레이션 전용</b> 이 체계는 실제 드론과 연동되어 있지 않습니다. 모든 조작은 화면 속 3D 가상 드론에만 반영되며, 실기체 연동은 후속 과제입니다.</p>
     </div>
     <figure class="hero-visual">
       <div class="signal-strip" id="heroSignals" aria-label="수신호 7종 미리보기"></div>
@@ -201,6 +202,7 @@
 <!-- ③ 조작 시뮬레이션 ─────────────────────────────── -->
 <section class="page" id="p-sim" data-page="sim" hidden>
   <div class="wrap sim-wrap">
+    <p class="sim-only"><b>시뮬레이션 전용</b> 실제 드론과 연동되어 있지 않습니다. 제스처는 화면 속 3D 가상 드론만 움직입니다.</p>
     <div class="statusbar" id="statusBar">
       <span class="chip" data-k="cam"><i></i>카메라</span>
       <span class="chip" data-k="model"><i></i>AI 모델</span>
@@ -469,10 +471,13 @@
         </div>
       </div>
       <p>저는 22년 전력/소요기획과정 1기로, 포즈 에스티메이션(Pose Estimation)에 관심이 많아 개인과제로 <b>Pose Estimation을 활용한 교육훈련 발전방향</b>을, 조별 주제로 <b>학습 기반 과학화 경계시스템 고도화 연구</b>를 수행했습니다.</p>
-      <h3 class="h4">발표 논문</h3>
+      <p>관심 분야는 포즈 추정·객체 탐지 같은 컴퓨터 비전, 증강현실 기반 교육훈련, 국방혁신 4.0을 위한 AI 적용과 거버넌스입니다.</p>
+      <h3 class="h4">주요 발표 논문</h3>
       <ul class="papers">
+        <li><a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12462547" target="_blank" rel="noopener">국방혁신 4.0을 고려한 한국군의 AI 적용 및 거버넌스 연구</a><span>2025년 1월</span></li>
         <li><a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11703256" target="_blank" rel="noopener">학습기반 과학화경계시스템 고도화에 적합한 YOLO v5 기술</a><span>국방과기술 · 2024년 2월</span></li>
-        <li><a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11207645" target="_blank" rel="noopener">딥러닝(Deep Learning) 기반의 YOLO v5를 활용한 위장군인 객체 탐지(Object Detection)에 관한 연구</a><span>한국지능정보시스템학회</span></li>
+        <li><a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11207645" target="_blank" rel="noopener">딥러닝(Deep Learning) 기반의 YOLO v5를 활용한 위장군인 객체 탐지(Object Detection)에 관한 연구</a><span>한국지능정보시스템학회 · 2022년</span></li>
+        <li><a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE07504134" target="_blank" rel="noopener">증강현실 기술의 소부대 야외 전술훈련 활용 방안 및 법제도에 관한 고찰</a><span>2018년 7월</span></li>
       </ul>
       <blockquote>26-2차 보수교육을 통해 전 교육의 피날레를 장식할 수 있게 해주신 점 진심으로 감사드립니다.</blockquote>
       <div class="contact">
@@ -488,7 +493,7 @@
 
 <footer class="foot">
   <div class="wrap">
-    <p><b>MotionCommand</b> · 연구·교육용 시제품입니다. 실제 무기체계나 공식 교범이 아닙니다.</p>
+    <p><b>MotionCommand</b> · 연구·교육용 시제품입니다. 실제 드론과 연동되어 있지 않으며, 실제 무기체계나 공식 교범이 아닙니다.</p>
     <p class="small">카메라 영상은 기기 안에서만 처리하며 전송·저장하지 않습니다. 문의 seouljade@kma.ac.kr</p>
   </div>
 </footer>
