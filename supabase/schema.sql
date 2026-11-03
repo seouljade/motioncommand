@@ -6,7 +6,7 @@ create table if not exists public.mc_attempts (
   created_at   timestamptz not null default now(),
   rank         text not null check (char_length(rank) <= 10),
   name         text not null check (char_length(name) between 1 and 20),
-  mission      text not null check (mission in ('M1','M2','M3','M4')),
+  mission      text not null check (mission in ('M1','M2','M3','M4','M5')),
   success      boolean not null,
   score        smallint not null check (score between 0 and 100),
   duration_s   real not null,
@@ -42,3 +42,7 @@ create policy "mc select" on public.mc_attempts
   for select to anon, authenticated using (true);
 
 -- 주의: anon 키로 모든 기록을 읽을 수 있으므로 군번·소속 등 식별정보는 저장하지 않습니다.
+
+-- v1.9: M5 전후 기동 추가 (이전 버전에서 만든 테이블용)
+alter table public.mc_attempts drop constraint if exists mc_attempts_mission_check;
+alter table public.mc_attempts add constraint mc_attempts_mission_check check (mission in ('M1','M2','M3','M4','M5'));

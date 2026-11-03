@@ -22,7 +22,9 @@
   function stateAt(t) {
     var p = V.tr.p, i = idxAt(p, t), a = p[i], b = p[Math.min(i + 1, p.length - 1)];
     var k = b[0] > a[0] ? Math.max(0, Math.min(1, (t - a[0]) / (b[0] - a[0]))) : 0;
-    return { i: i, x: a[1] + (b[1] - a[1]) * k, alt: a[2] + (b[2] - a[2]) * k, vx: (b[1] - a[1]) / Math.max(0.05, b[0] - a[0]),
+    var az = a[5] || 0, bz = b[5] || 0;
+    return { i: i, x: a[1] + (b[1] - a[1]) * k, alt: a[2] + (b[2] - a[2]) * k, z: az + (bz - az) * k,
+      vx: (b[1] - a[1]) / Math.max(0.05, b[0] - a[0]), vz: (bz - az) / Math.max(0.05, b[0] - a[0]),
       power: !!(a[3] & 1), autoLand: !!(a[3] & 2), g: a[4] };
   }
 
@@ -57,7 +59,7 @@
     var R = V.R, T = R.T, g = R.trail;
     while (g.children.length) g.remove(g.children[0]);
     MCSim.world.marks(T, R.w.marks, V.row.mission);
-    var pts = V.tr.p.map(function (s) { return new T.Vector3(s[1], s[2] + 0.1, 0); });
+    var pts = V.tr.p.map(function (s) { return new T.Vector3(s[1], s[2] + 0.1, s[5] || 0); });
     var full = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: '#6f8f76', transparent: true, opacity: 0.45 }));
     var done = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: '#e0a447' }));
     g.add(full); g.add(done); R.done = done;
@@ -66,25 +68,26 @@
       if (e.k !== 'e') return;
       var s = stateAt(e.t);
       var m = new T.Mesh(new T.SphereGeometry(0.13, 12, 12), new T.MeshBasicMaterial({ color: '#ec7b6e' }));
-      m.position.set(s.x, s.alt + 0.1, 0); g.add(m);
+      m.position.set(s.x, s.alt + 0.1, s.z); g.add(m);
     });
   }
   function draw(dt) {
     var R = V.R; if (!R) return;
     var s = stateAt(V.t), w = R.w;
-    w.drone.position.set(s.x, s.alt + 0.1, 0);
+    w.drone.position.set(s.x, s.alt + 0.1, s.z);
     w.drone.rotation.z = -Math.max(-2, Math.min(2, s.vx)) * 0.12;
+    w.drone.rotation.x = Math.max(-2, Math.min(2, s.vz)) * 0.12;
     var spin = s.power ? (s.alt > 0.02 ? 42 : 26) : 0;
     w.rotors.forEach(function (r, i) { r.rotation.y += (i % 2 ? -1 : 1) * spin * dt; r.userData.disc.material.opacity = spin > 10 ? 0.16 : 0; });
     w.led.material.color.set(s.power ? (s.autoLand ? '#e0a447' : '#4fd37a') : '#b23a2e');
-    w.shadow.position.x = s.x;
+    w.shadow.position.x = s.x; w.shadow.position.z = s.z;
     var sc = Math.max(0.35, 1 - s.alt * 0.08); w.shadow.scale.set(sc, sc, sc); w.shadow.material.opacity = 0.35 * sc;
     R.done.geometry.setDrawRange(0, s.i + 1);
     w.marks.children.forEach(function (m) { if (m.userData.kind === 'ring') m.rotation.y += dt * 0.6; });
     var cam = w.camera, asp = cam.aspect || 1.4, dist = asp < 1 ? 14 : asp < 1.3 ? 12 : 10.5;
-    var cx = s.x * 0.3, cy = 1.6 + s.alt * 0.45;
-    cam.position.set(cx + Math.sin(V.yaw) * dist * Math.cos(V.pitch), cy + Math.sin(V.pitch) * dist, Math.cos(V.yaw) * dist * Math.cos(V.pitch));
-    cam.lookAt(cx, cy - 0.4, 0);
+    var cx = s.x * 0.3, cy = 1.6 + s.alt * 0.45, cz = s.z * 0.5;
+    cam.position.set(cx + Math.sin(V.yaw) * dist * Math.cos(V.pitch), cy + Math.sin(V.pitch) * dist, cz + Math.cos(V.yaw) * dist * Math.cos(V.pitch));
+    cam.lookAt(cx, cy - 0.4, cz);
     R.renderer.render(w.scene, cam);
     readout(s);
   }
@@ -96,6 +99,7 @@
     $('rpSeek').value = V.t;
     $('rpAlt').textContent = s.alt.toFixed(1);
     $('rpX').textContent = (s.x >= 0 ? '+' : '') + s.x.toFixed(1);
+    $('rpZ').textContent = s.z < -0.05 ? '앞 ' + (-s.z).toFixed(1) : s.z > 0.05 ? '뒤 ' + s.z.toFixed(1) : '0.0';
     $('rpState').textContent = !s.power ? '전원 꺼짐' : s.autoLand ? '자동 착륙' : s.alt < 0.02 ? '이륙 대기' : '비행 중';
     if (s.g !== shownG) {
       shownG = s.g;
@@ -182,9 +186,10 @@
     M1: [['READY', 1.2], ['POWER_ON', 1.3], ['READY', 0.6], ['UP', 'alt', 3.15], ['READY', 0.8], ['DOWN', 'alt', 0], ['READY', 0.6], ['POWER_OFF', 1.3]],
     M2: [['READY', 1], ['POWER_ON', 1.3], ['UP', 'alt', 2.3], ['READY', 0.5], ['LEFT', 'x', -3.7], ['READY', 0.7], ['RIGHT', 'x', 3.7], ['READY', 0.6]],
     M3: [['READY', 1], ['POWER_ON', 1.3], ['UP', 'alt', 3.0], ['READY', 5.6]],
-    M4: [['READY', 1], ['POWER_ON', 1.3], ['UP', 'alt', 3.15], ['READY', 0.5], ['LEFT', 'x', -3.7], ['READY', 0.6], ['RIGHT', 'x', 3.7], ['READY', 0.6], ['DOWN', 'alt', 0], ['READY', 0.6], ['POWER_OFF', 1.3]]
+    M4: [['READY', 1], ['POWER_ON', 1.3], ['UP', 'alt', 3.15], ['READY', 0.5], ['LEFT', 'x', -3.7], ['READY', 0.6], ['RIGHT', 'x', 3.7], ['READY', 0.6], ['DOWN', 'alt', 0], ['READY', 0.6], ['POWER_OFF', 1.3]],
+    M5: [['READY', 1], ['POWER_ON', 1.3], ['UP', 'alt', 2.4], ['READY', 0.5], ['FORWARD', 'z', -3.7], ['READY', 0.7], ['BACK', 'z', 3.7], ['READY', 0.6]]
   };
-  var WRONG = { UP: 'LEFT', DOWN: 'POWER_OFF', LEFT: 'UP', RIGHT: 'DOWN', POWER_ON: 'UNKNOWN', POWER_OFF: 'DOWN' };
+  var WRONG = { UP: 'LEFT', DOWN: 'POWER_OFF', LEFT: 'UP', RIGHT: 'DOWN', FORWARD: 'LEFT', BACK: 'FORWARD', POWER_ON: 'UNKNOWN', POWER_OFF: 'DOWN' };
   function synth(code, opt) {
     opt = opt || {};
     var def = MCSim.MISSIONS[code], plan = PLANS[code];
@@ -196,15 +201,16 @@
       phases.push(ph);
     });
     if (opt.success === false) phases = phases.slice(0, Math.max(3, Math.round(phases.length * 0.6))).concat([['READY', 2.5]]);
-    var S = { power: false, alt: 0, x: 0, vx: 0, vy: 0, autoLand: false }, t = 0, dt = 0.05, step = 0, stay = 0;
+    var S = { power: false, alt: 0, x: 0, z: 0, vx: 0, vy: 0, vz: 0, autoLand: false }, t = 0, dt = 0.05, step = 0, stay = 0;
     var p = [], ev = [], next = 0, r1 = function (v) { return Math.round(v * 10) / 10; }, r2 = function (v) { return Math.round(v * 100) / 100; };
-    function rec(g) { p.push([r1(t), r2(S.x), r2(S.alt), (S.power ? 1 : 0) | (S.autoLand ? 2 : 0), g]); }
+    function rec(g) { p.push([r1(t), r2(S.x), r2(S.alt), (S.power ? 1 : 0) | (S.autoLand ? 2 : 0), g, r2(S.z)]); }
     phases.forEach(function (ph) {
       var g = ph[0], kind = INFO[g] ? INFO[g].kind : 'idle', hold = INFO[g] ? INFO[g].hold : 0, tau = 0, fired = false;
       var limit = typeof ph[1] === 'number' ? ph[1] * (0.85 + rnd() * 0.3) : 12;
       while (tau < limit) {
         if (ph[1] === 'alt' && (ph[2] > 0 ? S.alt >= ph[2] : S.alt <= 0.001) && tau > 0.6) break;
         if (ph[1] === 'x' && (ph[2] < 0 ? S.x <= ph[2] : S.x >= ph[2])) break;
+        if (ph[1] === 'z' && (ph[2] < 0 ? S.z <= ph[2] : S.z >= ph[2])) break;
         if (!fired && g !== 'READY' && tau >= hold) {
           fired = true; ev.push({ t: r1(t), k: 'g', g: g });
           if (ph[3]) ev.push({ t: r1(t), k: 'e', e: 'e1' });
@@ -213,8 +219,9 @@
         }
         var active = S.power && kind === 'move' && fired ? g : null;
         var ty = active === 'UP' ? 1.5 : active === 'DOWN' ? -1.5 : 0, tx = active === 'LEFT' && S.alt > 0.05 ? -2 : active === 'RIGHT' && S.alt > 0.05 ? 2 : 0;
-        var k = Math.min(1, dt * 4); S.vx += (tx - S.vx) * k; S.vy += (ty - S.vy) * k;
-        S.x += S.vx * dt; S.alt += S.vy * dt; if (S.alt <= 0) { S.alt = 0; if (S.vy < 0) S.vy = 0; S.vx *= 0.5; }
+        var tz = active === 'FORWARD' && S.alt > 0.05 ? -2 : active === 'BACK' && S.alt > 0.05 ? 2 : 0;
+        var k = Math.min(1, dt * 4); S.vx += (tx - S.vx) * k; S.vy += (ty - S.vy) * k; S.vz += (tz - S.vz) * k;
+        S.x += S.vx * dt; S.alt += S.vy * dt; S.z += S.vz * dt; if (S.alt <= 0) { S.alt = 0; if (S.vy < 0) S.vy = 0; S.vx *= 0.5; S.vz *= 0.5; }
         var st = def.steps[step];
         if (st) {
           if (st.stay) { if (st.ok(S) && !active) stay += dt; else if (!st.ok(S)) stay = 0; if (stay >= st.stay) { step++; ev.push({ t: r1(t), k: 's', s: step }); } }

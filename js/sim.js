@@ -7,7 +7,7 @@
 
   /* ── 상태 ───────────────────────────── */
   var S = {
-    power: false, alt: 0, x: 0, vx: 0, vy: 0, bat: 100, autoLand: false, wasAir: false,
+    power: false, alt: 0, x: 0, z: 0, vx: 0, vy: 0, vz: 0, bat: 100, autoLand: false, wasAir: false,
     rotor: 0, edgeHit: false
   };
   var cam = { stream: null, on: false, model: 'idle', landmarker: null, lastT: -1, lastRes: null, lastSeen: 0, err: '' };
@@ -63,9 +63,18 @@
         { t: '착륙', allow: ['DOWN', 'UP', 'LEFT'], ok: function (s) { return s.alt <= 0.01; } },
         { t: '손바닥 아래로 전원 끄기', allow: ['POWER_OFF'], ok: function (s) { return !s.power; } }
       ]
+    },
+    M5: {
+      code: 'M5', title: 'M5 전후 기동', limit: 90,
+      desc: '이륙해 고도 2m 이상을 확보한 뒤 앞쪽 표적(4m), 뒤쪽 표적(4m) 순서로 도달합니다. 전진은 숫자 1, 후진은 숫자 2. 제한 90초.',
+      steps: [
+        { t: '전원 켜고 고도 2m 이상 상승', allow: ['POWER_ON', 'UP', 'DOWN'], ok: function (s) { return s.power && s.alt >= 2; } },
+        { t: '숫자 1로 앞쪽 표적(4m) 도달', allow: ['FORWARD', 'UP', 'DOWN'], ok: function (s) { return s.z <= -3.5 && s.alt >= 1; }, tz: -4 },
+        { t: '숫자 2로 뒤쪽 표적(4m) 도달', allow: ['BACK', 'UP', 'DOWN'], ok: function (s) { return s.z >= 3.5 && s.alt >= 1; }, tz: 4 }
+      ]
     }
   };
-  function inBox(s) { return s.power && s.alt >= 2.5 && s.alt <= 3.5 && Math.abs(s.x) <= 1; }
+  function inBox(s) { return s.power && s.alt >= 2.5 && s.alt <= 3.5 && Math.abs(s.x) <= 1 && Math.abs(s.z || 0) <= 1; }
 
   /* ── 로그·토스트 ─────────────────────── */
   var logEl, toastEl, toastTimer;
@@ -122,12 +131,12 @@
   function addErr(k) { mission.err[k]++; mark({ k: 'e', e: k }); }
 
   /* ── 재생용 궤적 기록 ───────────────── */
-  // p: [시각, 좌우 x, 고도, 상태(1=전원, 2=자동착륙), 화면에 보인 수신호]
+  // p: [시각, 좌우 x, 고도, 상태(1=전원, 2=자동착륙), 화면에 보인 수신호, 전후 z(앞이 −)]
   // ev: 수신호 확정(g)·실수(e)·단계 완료(s) 순간
   function mark(ev) { ev.t = Math.round(mission.t * 10) / 10; mission.track.ev.push(ev); }
   function sample() {
     var r2 = function (v) { return Math.round(v * 100) / 100; };
-    mission.track.p.push([Math.round(mission.t * 10) / 10, r2(S.x), r2(S.alt), (S.power ? 1 : 0) | (S.autoLand ? 2 : 0), input.shown]);
+    mission.track.p.push([Math.round(mission.t * 10) / 10, r2(S.x), r2(S.alt), (S.power ? 1 : 0) | (S.autoLand ? 2 : 0), input.shown, r2(S.z)]);
   }
 
   /* ── 3D ─────────────────────────────── */
@@ -152,10 +161,8 @@
 
     // 훈련 구역 경계
     var bm = new T.LineBasicMaterial({ color: '#b7791f', transparent: true, opacity: 0.55 });
-    [-8, 8].forEach(function (x) {
-      var g = new T.BufferGeometry().setFromPoints([new T.Vector3(x, 0, -2), new T.Vector3(x, 8, -2), new T.Vector3(x, 8, 2), new T.Vector3(x, 0, 2)]);
-      scene.add(new T.Line(g, bm));
-    });
+    var fence = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(16, 8, 16)), bm);
+    fence.position.y = 4; scene.add(fence);
 
     // 이착륙장
     var pad = new T.Mesh(new T.RingGeometry(0.55, 0.75, 40), new T.MeshBasicMaterial({ color: '#7fb58a', side: T.DoubleSide }));
@@ -238,11 +245,12 @@
       var m = new T.Mesh(new T.TorusGeometry(0.9, 0.05, 10, 48), new T.MeshBasicMaterial({ color: amber }));
       m.position.set(0, y, 0); m.userData.kind = 'ring'; g.add(m);
     }
-    function column(x) {
+    function column(x, z) {
+      z = z || 0;
       var m = new T.Mesh(new T.CylinderGeometry(0.45, 0.45, 4, 24, 1, true), new T.MeshBasicMaterial({ color: green, transparent: true, opacity: 0.18, side: T.DoubleSide }));
-      m.position.set(x, 2, 0); m.userData.kind = 'col'; m.userData.x = x; g.add(m);
+      m.position.set(x, 2, z); m.userData.kind = 'col'; m.userData.x = x; m.userData.z = z; g.add(m);
       var base = new T.Mesh(new T.RingGeometry(0.4, 0.55, 32), new T.MeshBasicMaterial({ color: green, side: T.DoubleSide }));
-      base.rotation.x = -Math.PI / 2; base.position.set(x, 0.015, 0); g.add(base);
+      base.rotation.x = -Math.PI / 2; base.position.set(x, 0.015, z); g.add(base);
     }
     function box() {
       var geo = new T.EdgesGeometry(new T.BoxGeometry(2, 1, 1.6));
@@ -253,14 +261,15 @@
     if (code === 'M2') { column(-4); column(4); }
     if (code === 'M3') box();
     if (code === 'M4') { ring(3); column(-4); column(4); }
+    if (code === 'M5') { column(0, -4); column(0, 4); }
   }
 
   function render3D(dt) {
     if (!R.ok) return;
     var d = R.drone;
-    d.position.set(S.x, S.alt + 0.1, 0);
+    d.position.set(S.x, S.alt + 0.1, S.z);
     d.rotation.z = -S.vx * 0.12;
-    d.rotation.x = S.vy * 0.03;
+    d.rotation.x = S.vy * 0.03 + S.vz * 0.12;
     var spin = S.power ? (S.alt > 0.02 ? 42 : 26) : Math.max(0, (R.spinLeft || 0));
     if (!S.power && R.spinLeft > 0) R.spinLeft -= dt * 30; else if (S.power) R.spinLeft = 26;
     R.rotors.forEach(function (r, i) {
@@ -268,43 +277,48 @@
       r.userData.disc.material.opacity = spin > 10 ? 0.16 : 0;
     });
     R.led.material.color.set(S.power ? (S.autoLand ? '#e0a447' : '#4fd37a') : '#b23a2e');
-    R.shadow.position.x = S.x;
+    R.shadow.position.x = S.x; R.shadow.position.z = S.z;
     var sc = Math.max(0.35, 1 - S.alt * 0.08); R.shadow.scale.set(sc, sc, sc);
     R.shadow.material.opacity = 0.35 * sc;
 
     // 현재 목표 강조
-    var tgt = mission && mission.running ? (mission.def.steps[mission.step] || {}).target : null;
+    var cur = mission && mission.running ? (mission.def.steps[mission.step] || {}) : {};
     R.marks.children.forEach(function (m) {
-      if (m.userData.kind === 'col') m.material.opacity = (tgt === m.userData.x) ? 0.26 + 0.08 * Math.sin(performance.now() / 250) : 0.08;
+      var on = (cur.target != null && cur.target === m.userData.x) || (cur.tz != null && cur.tz === m.userData.z);
+      if (m.userData.kind === 'col') m.material.opacity = on ? 0.26 + 0.08 * Math.sin(performance.now() / 250) : 0.08;
       if (m.userData.kind === 'ring') m.rotation.y += dt * 0.6;
     });
 
     var asp = R.camera.aspect || 1.4; var dist = asp < 1 ? 14 : asp < 1.3 ? 12 : 10.5;
-    var cx = S.x * 0.3, cy = 1.6 + S.alt * 0.45;
-    R.camera.position.set(cx + Math.sin(R.yaw) * dist * Math.cos(R.pitch), cy + Math.sin(R.pitch) * dist, Math.cos(R.yaw) * dist * Math.cos(R.pitch));
-    R.camera.lookAt(cx, cy - 0.4, 0);
+    var cx = S.x * 0.3, cy = 1.6 + S.alt * 0.45, cz = S.z * 0.5;
+    R.camera.position.set(cx + Math.sin(R.yaw) * dist * Math.cos(R.pitch), cy + Math.sin(R.pitch) * dist, cz + Math.cos(R.yaw) * dist * Math.cos(R.pitch));
+    R.camera.lookAt(cx, cy - 0.4, cz);
     R.renderer.render(R.scene, R.camera);
   }
 
   /* ── 물리 ───────────────────────────── */
   function physics(dt, active) {
-    var tx = 0, ty = 0;
+    var tx = 0, ty = 0, tz = 0;
     if (S.power && !S.autoLand) {
       if (active === G.UP) ty = 1.5;
       if (active === G.DOWN) ty = -1.5;
       if (active === G.LEFT && S.alt > 0.05) tx = -2;
       if (active === G.RIGHT && S.alt > 0.05) tx = 2;
+      if (active === G.FORWARD && S.alt > 0.05) tz = -2; // 앞(화면 안쪽)이 −z
+      if (active === G.BACK && S.alt > 0.05) tz = 2;
     }
-    if (S.autoLand) { ty = -1.1; tx = 0; }
+    if (S.autoLand) { ty = -1.1; tx = 0; tz = 0; }
     var k = Math.min(1, dt * 4);
-    S.vx += (tx - S.vx) * k; S.vy += (ty - S.vy) * k;
-    S.x += S.vx * dt; S.alt += S.vy * dt;
+    S.vx += (tx - S.vx) * k; S.vy += (ty - S.vy) * k; S.vz += (tz - S.vz) * k;
+    S.x += S.vx * dt; S.alt += S.vy * dt; S.z += S.vz * dt;
 
     var hit = false;
-    if (S.alt <= 0) { S.alt = 0; if (S.vy < 0) S.vy = 0; S.vx *= 0.5; }
+    if (S.alt <= 0) { S.alt = 0; if (S.vy < 0) S.vy = 0; S.vx *= 0.5; S.vz *= 0.5; }
     if (S.alt > 8) { S.alt = 8; S.vy = 0; hit = true; }
     if (S.x < -8) { S.x = -8; S.vx = 0; hit = true; }
     if (S.x > 8) { S.x = 8; S.vx = 0; hit = true; }
+    if (S.z < -8) { S.z = -8; S.vz = 0; hit = true; }
+    if (S.z > 8) { S.z = 8; S.vz = 0; hit = true; }
     if (hit && !S.edgeHit) { log('훈련 구역 경계 도달', 'warn'); toast('구역 경계', 'warn'); if (mission && mission.running) addErr('e4'); }
     S.edgeHit = hit;
     if (S.alt > 0.5) S.wasAir = true;
@@ -409,7 +423,7 @@
   }
 
   function resetDrone(silent) {
-    S.power = false; S.alt = 0; S.x = 0; S.vx = 0; S.vy = 0; S.bat = 100; S.autoLand = false; S.wasAir = false; S.edgeHit = false;
+    S.power = false; S.alt = 0; S.x = 0; S.z = 0; S.vx = 0; S.vy = 0; S.vz = 0; S.bat = 100; S.autoLand = false; S.wasAir = false; S.edgeHit = false;
     if (!silent) log('드론 초기화');
   }
 
@@ -489,9 +503,9 @@
   }
 
   /* ── 수동 입력 (화면 버튼·키보드) ─────── */
-  var KEYMAP = { p: 'POWER_ON', P: 'POWER_ON', ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', o: 'POWER_OFF', O: 'POWER_OFF' };
+  var KEYMAP = { p: 'POWER_ON', P: 'POWER_ON', ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', w: 'FORWARD', W: 'FORWARD', s: 'BACK', S: 'BACK', o: 'POWER_OFF', O: 'POWER_OFF' };
   function bindPad(padEl) {
-    ['POWER_ON', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'POWER_OFF'].forEach(function (id) {
+    ['POWER_ON', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'FORWARD', 'BACK', 'POWER_OFF'].forEach(function (id) {
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'pad-btn'; b.dataset.g = id;
       b.innerHTML = MCHand.svg(id, 44) + '<span><b>' + INFO[id].ko + '</b><small>' + INFO[id].sign + '</small></span>';
@@ -535,6 +549,7 @@
     $('gDetail').textContent = input.pad ? '수동 입력 중' : (raw.detail || (cam.on ? '손을 카메라에 보여주세요' : '카메라 꺼짐 — 수동 입력 사용 가능'));
     $('hAlt').textContent = S.alt.toFixed(1);
     $('hX').textContent = (S.x >= 0 ? '+' : '') + S.x.toFixed(1);
+    $('hZ').textContent = S.z < -0.05 ? '앞 ' + (-S.z).toFixed(1) : S.z > 0.05 ? '뒤 ' + S.z.toFixed(1) : '0.0';
     $('hBat').textContent = Math.round(S.bat);
     $('hState').textContent = !S.power ? '전원 꺼짐' : S.autoLand ? '자동 착륙' : S.alt < 0.02 ? '이륙 대기' : (input.active === G.HOVER ? '호버링' : INFO[input.active].ko);
   }

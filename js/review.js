@@ -3,7 +3,7 @@
   'use strict';
   var INFO = window.MCGesture.INFO;
   var $ = function (id) { return document.getElementById(id); };
-  var MNAME = { M1: 'M1 기본 이착륙', M2: 'M2 좌우 기동', M3: 'M3 정밀 호버링', M4: 'M4 종합 임무' };
+  var MNAME = { M1: 'M1 기본 이착륙', M2: 'M2 좌우 기동', M3: 'M3 정밀 호버링', M4: 'M4 종합 임무', M5: 'M5 전후 기동' };
   var ERR = {
     e1: { ko: '제스처 오인식', tip: '과제와 다른 명령이 확정됐습니다. 손 모양을 끝까지 만든 뒤 유지하세요.' },
     e2: { ko: '유지 시간 미달', tip: '손 모양을 만든 뒤 이동은 0.5초, 전원은 1초 그대로 유지하세요.' },
@@ -93,7 +93,7 @@
       kpi('합격률', n ? pct(pass / n) : '-', '80점 이상') +
       kpi('최근 점수', lastS != null ? lastS + '점' : '-', delta != null ? (delta >= 0 ? '▲ ' : '▼ ') + Math.abs(delta) + '점 (직전 대비)' : '', delta != null ? (delta >= 0 ? 'up' : 'down') : '');
     $('chartTrend').innerHTML = trendChart(rows);
-    $('chartMission').innerHTML = barChart(['M1', 'M2', 'M3', 'M4'].map(function (m) {
+    $('chartMission').innerHTML = barChart(['M1', 'M2', 'M3', 'M4', 'M5'].map(function (m) {
       var a = rows.filter(function (r) { return r.mission === m; });
       var ok = a.filter(function (r) { return r.success; }).length;
       return { label: m, v: a.length ? ok / a.length * 100 : 0, txt: a.length ? pct(ok / a.length) + ' (' + ok + '/' + a.length + ')' : '미실시', cls: 'acc' };
@@ -114,6 +114,24 @@
     });
   }
 
+  /* ── 회차 재생 목록 ────────────────── */
+  function renderReplayList(rows, who, onReplay) {
+    var names = []; rows.forEach(function (r) { if (names.indexOf(key(r)) < 0) names.push(key(r)); });
+    $('fReplayWho').innerHTML = '<option value="">전체 훈련자</option>' + names.map(function (n) { return '<option' + (n === who ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('');
+    var list = rows.filter(function (r) { return !who || key(r) === who; }).slice().reverse();
+    var head = '<thead><tr><th>일시</th><th>훈련자</th><th>과제</th><th>결과</th><th class="num">점수</th><th class="num">시간</th><th>실수</th><th>재생</th></tr></thead>';
+    var body = list.map(function (r, i) {
+      var errs = errSum(r) ? '<span class="tag">' + errSum(r) + '건</span>' : '<span class="mut">없음</span>';
+      var can = r.has_track || r.track;
+      return '<tr' + (can ? '' : ' class="mut-row"') + '><td>' + fmtDate(r.created_at) + '</td><td>' + esc(key(r)) + '</td><td>' + esc(MNAME[r.mission] || r.mission) + '</td><td>' + (r.success ? '<span class="pill ok">성공</span>' : '<span class="pill bad">실패</span>') + '</td><td class="num"><b>' + r.score + '</b></td><td class="num">' + r.duration_s + 's</td><td>' + errs + '</td><td>' +
+        (can ? '<button class="btn btn-sm btn-primary" type="button" data-replay="' + i + '">▶ 다시 보기</button>' : '<span class="mut" title="재생 기능 추가(v1.8) 전 회차이거나 CSV로 가져온 기록">재생 데이터 없음</span>') + '</td></tr>';
+    }).join('');
+    $('tblReplay').innerHTML = head + '<tbody>' + (body || '<tr><td colspan="8" class="empty">아직 기록이 없습니다. 조작 시뮬레이션에서 훈련 과제를 수행하면 여기서 다시 볼 수 있습니다.</td></tr>') + '</tbody>';
+    $('tblReplay').querySelectorAll('[data-replay]').forEach(function (b) {
+      b.addEventListener('click', function () { var r = list[+b.getAttribute('data-replay')]; onReplay(r, null); });
+    });
+  }
+
   /* ── 교관 화면 ────────────────────── */
   function renderAll(rows, onPick) {
     var groups = {};
@@ -131,7 +149,7 @@
       kpi('합격률', rows.length ? pct(pass / rows.length) : '-') +
       kpi('가장 많은 실수', rows.length && errTot[topErr] ? ERR[topErr].ko : '-', rows.length && errTot[topErr] ? errTot[topErr] + '회' : '');
     $('chartErr').innerHTML = barChart(Object.keys(errTot).map(function (k) { return { label: k.toUpperCase() + ' ' + ERR[k].ko, v: errTot[k], cls: k === 'e3' ? 'bad' : 'warn' }; }));
-    $('chartMissionAll').innerHTML = barChart(['M1', 'M2', 'M3', 'M4'].map(function (m) {
+    $('chartMissionAll').innerHTML = barChart(['M1', 'M2', 'M3', 'M4', 'M5'].map(function (m) {
       var a = rows.filter(function (r) { return r.mission === m; });
       return { label: m, v: a.length ? avg(a.map(function (r) { return r.score; })) : 0, txt: a.length ? Math.round(avg(a.map(function (r) { return r.score; }))) + '점 · ' + a.length + '회' : '미실시', cls: 'acc' };
     }), { max: 100 });
@@ -150,7 +168,7 @@
   function sampleRows() {
     var people = [['상병', '예시-김OO'], ['하사', '예시-이OO'], ['중위', '예시-박OO']];
     var out = [], t0 = Date.now() - 1000 * 60 * 60 * 30;
-    var seq = ['M1', 'M1', 'M2', 'M3', 'M2', 'M4', 'M3', 'M4'];
+    var seq = ['M1', 'M1', 'M2', 'M3', 'M5', 'M2', 'M4', 'M3', 'M5', 'M4'];
     people.forEach(function (p, pi) {
       seq.forEach(function (m, i) {
         var skill = 0.45 + i * 0.07 + pi * 0.04;
@@ -168,5 +186,5 @@
     return out;
   }
 
-  window.MCReview = { renderMe: renderMe, renderAll: renderAll, sampleRows: sampleRows, habits: habits, ERR: ERR, MNAME: MNAME, key: key };
+  window.MCReview = { renderMe: renderMe, renderAll: renderAll, renderReplayList: renderReplayList, sampleRows: sampleRows, habits: habits, ERR: ERR, MNAME: MNAME, key: key };
 })();

@@ -12,6 +12,8 @@
     DOWN: 'DOWN',
     LEFT: 'LEFT',
     RIGHT: 'RIGHT',
+    FORWARD: 'FORWARD',
+    BACK: 'BACK',
     POWER_OFF: 'POWER_OFF',
     HOVER: 'HOVER',     // 손 없음 / 판정 불가 → 제자리 정지
     UNKNOWN: 'UNKNOWN'  // 손은 있으나 정의되지 않은 모양
@@ -23,6 +25,8 @@
     DOWN:      { ko: '하강', sign: '엄지 아래', hold: 0.5, kind: 'move' },
     LEFT:      { ko: '좌측 이동', sign: '검지로 왼쪽', hold: 0.5, kind: 'move' },
     RIGHT:     { ko: '우측 이동', sign: '검지로 오른쪽', hold: 0.5, kind: 'move' },
+    FORWARD:   { ko: '전진', sign: '검지 하나 위로 (숫자 1)', hold: 0.5, kind: 'move' },
+    BACK:      { ko: '후진', sign: '검지·중지 위로 (숫자 2)', hold: 0.5, kind: 'move' },
     POWER_OFF: { ko: '전원 끄기', sign: '손바닥 아래로', hold: 1.0, kind: 'event' },
     HOVER:     { ko: '정지(호버링)', sign: '손을 화면 밖으로', hold: 0, kind: 'idle' },
     UNKNOWN:   { ko: '판정 불가', sign: '정의되지 않은 모양', hold: 0, kind: 'idle' }
@@ -82,14 +86,28 @@
       return { id: G.UNKNOWN, conf: base, fingers: fingers, detail: '엄지가 수평에 가까움' };
     }
 
-    // G4/G5 검지 좌·우: 검지만 펴짐, 수평 방향
+    // G4/G5 검지 좌·우: 검지만 펴짐, 수평 방향 / G8 전진: 검지만 위로 (숫자 1)
     if (idx && !mid && !ring && !pinky) {
       var d = sub(P[8], P[5]);
       if (Math.abs(d.x) > Math.abs(d.y) * 1.2) {
         var r = clamp(Math.abs(d.x) / (Math.abs(d.x) + Math.abs(d.y)), 0.5, 1);
         return { id: d.x < 0 ? G.LEFT : G.RIGHT, conf: base * (0.5 + r / 2), fingers: fingers, detail: '검지 방향 ' + (d.x < 0 ? '←' : '→') };
       }
-      return { id: G.UNKNOWN, conf: base, fingers: fingers, detail: '검지가 수직에 가까움' };
+      if (d.y < 0 && Math.abs(d.y) > Math.abs(d.x) * 1.2) {
+        var u = clamp(Math.abs(d.y) / (Math.abs(d.x) + Math.abs(d.y)), 0.5, 1);
+        return { id: G.FORWARD, conf: base * (0.5 + u / 2), fingers: fingers, detail: '검지 하나 위로 (숫자 1)' };
+      }
+      return { id: G.UNKNOWN, conf: base, fingers: fingers, detail: '검지가 대각선·아래 방향' };
+    }
+
+    // G9 후진: 검지·중지만 위로 (숫자 2)
+    if (idx && mid && !ring && !pinky) {
+      var d2 = sub({ x: (P[8].x + P[12].x) / 2, y: (P[8].y + P[12].y) / 2, z: 0 }, { x: (P[5].x + P[9].x) / 2, y: (P[5].y + P[9].y) / 2, z: 0 });
+      if (d2.y < 0 && Math.abs(d2.y) > Math.abs(d2.x) * 1.2) {
+        var u2 = clamp(Math.abs(d2.y) / (Math.abs(d2.x) + Math.abs(d2.y)), 0.5, 1);
+        return { id: G.BACK, conf: base * (0.5 + u2 / 2), fingers: fingers, detail: '검지·중지 위로 (숫자 2)' };
+      }
+      return { id: G.UNKNOWN, conf: base, fingers: fingers, detail: '두 손가락이 위를 향하지 않음' };
     }
 
     return { id: G.UNKNOWN, conf: base, fingers: fingers, detail: '정의되지 않은 손 모양' };

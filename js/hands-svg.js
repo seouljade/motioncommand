@@ -39,6 +39,14 @@
       return hand([palm(), finger(0, 1), finger(1, 0), finger(2, 0), finger(3, 0), thumbFold()], 'rotate(90 60 66) translate(0 4)') +
         arrow('M62 104 H106 M96 96 L106 104 L96 112');
     },
+    FORWARD: function () {
+      return hand([palm(), finger(0, 1), finger(1, 0), finger(2, 0), finger(3, 0), thumbFold()], 'translate(-8 0)') +
+        arrow('M94 50 L103 40 L112 50 M94 64 L103 54 L112 64') + '<text class="g-lbl" x="103" y="80" text-anchor="middle">앞</text>';
+    },
+    BACK: function () {
+      return hand([palm(), finger(0, 1), finger(1, 1), finger(2, 0), finger(3, 0), thumbFold()], 'translate(-8 0)') +
+        arrow('M94 40 L103 50 L112 40 M94 54 L103 64 L112 54') + '<text class="g-lbl" x="103" y="80" text-anchor="middle">뒤</text>';
+    },
     POWER_OFF: function () {
       return hand([palm(), finger(0, 1), finger(1, 1), finger(2, 1), finger(3, 1)], 'translate(2 -8) rotate(90 60 60)') +
         '<path class="arw" d="M30 98 H90"/><path class="arw" d="M60 100 V114 M53 107 L60 114 L67 107"/>';

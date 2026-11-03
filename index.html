@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MotionCommand</title>
+<meta name="mc-version" content="1.9">
 <meta name="description" content="카메라로 손 수신호를 인식해 드론을 조종하는 제스처 기반 드론 통제 훈련 체계. Army TIGER+ 유무인복합전투를 위한 Physical AI 시제품.">
 <meta property="og:title" content="MotionCommand — 손짓으로 지휘하는 드론">
 <meta property="og:description" content="조종기 없이 손 수신호로 드론을 통제하는 제스처 기반 훈련 시뮬레이터. 3D 드론, 훈련 미션 채점, 사후검토까지.">
@@ -26,7 +27,7 @@
       <a href="#intro" data-route="intro"><i>1</i>체계 소개</a>
       <a href="#setup" data-route="setup"><i>2</i>환경설정·조작법</a>
       <a href="#sim" data-route="sim" class="nav-key"><i>3</i>조작 시뮬레이션<em>핵심</em></a>
-      <a href="#review" data-route="review"><i>4</i>사후검토</a>
+      <a href="#review" data-route="review"><i>4</i>사후검토·재생</a>
       <a href="#learn" data-route="learn"><i>5</i>관련 정보</a>
       <a href="#maker" data-route="maker"><i>6</i>제작자 정보</a>
     </nav>
@@ -44,13 +45,13 @@
       <p class="lead">MotionCommand는 카메라로 손 수신호를 인식해 드론을 조종하는 제스처 기반 통제 체계입니다. 실기체 없이 3D 시뮬레이션으로 훈련하고, 조작 기록으로 잘못된 습관을 사후검토합니다.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#sim">지금 체험하기</a>
-        <a class="btn" href="#setup" data-jump="signals">수신호 7종 보기</a>
+        <a class="btn" href="#setup" data-jump="signals">수신호 9종 보기</a>
       </div>
       <p class="hint">카메라가 없어도 화면 버튼이나 키보드로 바로 체험할 수 있습니다.</p>
       <p class="sim-only"><b>시뮬레이션 전용</b> 이 체계는 실제 드론과 연동되어 있지 않습니다. 모든 조작은 화면 속 3D 가상 드론에만 반영되며, 실기체 연동은 후속 과제입니다.</p>
     </div>
     <figure class="hero-visual">
-      <div class="signal-strip" id="heroSignals" aria-label="수신호 7종 미리보기"></div>
+      <div class="signal-strip" id="heroSignals" aria-label="수신호 9종 미리보기"></div>
       <figcaption>
         <img src="assets/emblem-army-tiger.png" alt="Army TIGER — 미래 다영역작전을 주도하는 첨단과학기술군" width="102" height="96">
         <span>조종기 대신 손.<br>장비 대신 카메라.</span>
@@ -131,7 +132,7 @@
       <h2>훈련에서 실전 통제까지</h2>
     </header>
     <ol class="roadmap">
-      <li class="now"><span>1단계 · 현재</span><b>제스처 훈련 시뮬레이터</b><p>수신호 7종, 3D 드론, 미션 채점, 사후검토. 훈련 데이터 축적 시작</p></li>
+      <li class="now"><span>1단계 · 현재</span><b>제스처 훈련 시뮬레이터</b><p>수신호 9종, 3D 드론, 미션 채점, 사후검토·회차 재생. 훈련 데이터 축적 시작</p></li>
       <li><span>2단계</span><b>보조·예비 통제 수단</b><p>실기체 연동, 조종기 고장 시 착륙·회수용 비상 통제, 장갑·야간 인식 검증</p></li>
       <li><span>3단계</span><b>유무인복합분대 HMI</b><p>다수 무인체계 통제, 축적 데이터로 학습 기반 인식 고도화, 디지털 백본 연계</p></li>
     </ol>
@@ -181,10 +182,13 @@
     <header class="sec-head row-head">
       <div>
         <p class="eyebrow">조작방법</p>
-        <h2>수신호 7종</h2>
-        <p>모든 명령은 같은 손 모양을 잠시 유지해야 실행됩니다. 이동은 0.5초, 전원 켜기·끄기는 1초입니다. 애매하면 드론은 항상 제자리에 멈춥니다.</p>
+        <h2>수신호 9종</h2>
+        <p>매뉴얼 버튼을 누르면 인쇄 창이 열립니다. 대상에서 "PDF로 저장"을 고르세요. 모든 명령은 같은 손 모양을 잠시 유지해야 실행됩니다. 이동은 0.5초, 전원 켜기·끄기는 1초입니다. 애매하면 드론은 항상 제자리에 멈춥니다.</p>
       </div>
-      <button class="btn btn-primary" id="btnManual" type="button">매뉴얼 다운로드 (PDF)</button>
+      <div class="btn-row manual-btns">
+        <button class="btn btn-primary" id="btnManual" type="button">수신호 매뉴얼 (PDF)</button>
+        <button class="btn" id="btnGuide" type="button">체계 활용 매뉴얼 (PDF)</button>
+      </div>
     </header>
     <div class="gesture-grid" id="gestureCards"></div>
 
@@ -238,6 +242,7 @@
           <div class="hud">
             <div><span>고도</span><b id="hAlt">0.0</b><small>m</small></div>
             <div><span>좌우</span><b id="hX">0.0</b><small>m</small></div>
+            <div><span>전후</span><b id="hZ">0.0</b><small>m</small></div>
             <div><span>배터리</span><b id="hBat">100</b><small>%</small></div>
             <div><span>상태</span><b id="hState">전원 꺼짐</b></div>
           </div>
@@ -300,6 +305,7 @@
       </div>
       <div class="seg" role="tablist" aria-label="보기 전환">
         <button type="button" role="tab" id="tabMe" aria-selected="true">개인</button>
+        <button type="button" role="tab" id="tabReplay" aria-selected="false">회차 재생</button>
         <button type="button" role="tab" id="tabAll" aria-selected="false">교관</button>
       </div>
     </header>
@@ -323,6 +329,16 @@
       </div>
       <div class="card"><h3 class="h4">잘못된 습관 Top 3</h3><ol class="habits" id="habits"></ol></div>
       <div class="card"><h3 class="h4">회차별 기록</h3><div class="table-scroll"><table class="data-table" id="tblMe"></table></div></div>
+    </div>
+
+    <div id="reviewReplay" hidden>
+      <div class="card">
+        <div class="replay-head">
+          <div><h3 class="h4">회차 재생</h3><p class="small">회차를 고르면 그때의 비행 궤적과 인식된 수신호를 3D로 다시 봅니다. 최근 회차가 위에 있습니다.</p></div>
+          <label>훈련자<select id="fReplayWho"></select></label>
+        </div>
+        <div class="table-scroll"><table class="data-table" id="tblReplay"></table></div>
+      </div>
     </div>
 
     <div id="reviewAll" hidden>
@@ -380,7 +396,7 @@
         <div><span>입력</span><b>카메라 프레임</b><p>초당 약 30장</p></div>
         <div><span>1단계</span><b>손바닥 탐지</b><p>BlazePalm. 손가락보다 모양이 단순한 손바닥을 먼저 찾아 손 영역을 자름</p></div>
         <div><span>2단계</span><b>손 관절 추정</b><p>잘라낸 영역에서 관절 21점의 x, y, z 좌표를 회귀로 출력</p></div>
-        <div class="hl"><span>MotionCommand</span><b>제스처 판정</b><p>좌표로 손가락 펴짐과 방향을 계산해 수신호 7종으로 분류</p></div>
+        <div class="hl"><span>MotionCommand</span><b>제스처 판정</b><p>좌표로 손가락 펴짐과 방향을 계산해 수신호 9종으로 분류</p></div>
       </div>
       <p>다음 프레임에서는 이전 손 위치를 이용해 1단계를 건너뛰므로 빠르게 추적합니다. 손을 놓치면 다시 1단계부터 시작합니다.</p>
     </article>
@@ -509,7 +525,7 @@
     <div class="rp-grid">
       <div class="rp-stage">
         <canvas id="rpCanvas" aria-label="비행 궤적 3D 재생"></canvas>
-        <div class="hud rp-hud"><div><span>고도</span><b id="rpAlt">0.0</b><small>m</small></div><div><span>좌우</span><b id="rpX">0.0</b><small>m</small></div><div><span>상태</span><b id="rpState">-</b></div></div>
+        <div class="hud rp-hud"><div><span>고도</span><b id="rpAlt">0.0</b><small>m</small></div><div><span>좌우</span><b id="rpX">0.0</b><small>m</small></div><div><span>전후</span><b id="rpZ">0.0</b><small>m</small></div><div><span>상태</span><b id="rpState">-</b></div></div>
         <p class="rp-tip">드래그해 시점 회전 · 더블클릭 초기화</p>
       </div>
       <aside class="rp-side">
@@ -529,10 +545,12 @@
   <p class="rp-privacy">카메라 영상은 개인정보 보호 원칙에 따라 저장하지 않으므로 재생하지 않습니다. 저장된 위치·고도·인식된 수신호만으로 다시 그립니다.</p>
 </dialog>
 
+<div class="update-bar" id="updateBar" role="status" hidden>새 버전이 배포되었습니다. 새로고침하면 최신 기능이 적용됩니다. <button class="btn btn-sm" id="btnUpdate" type="button">새로고침</button></div>
+
 <footer class="foot">
   <div class="wrap">
     <p><b>MotionCommand</b> · 연구·교육용 시제품입니다. 실제 드론과 연동되어 있지 않으며, 실제 무기체계나 공식 교범이 아닙니다.</p>
-    <p class="small">카메라 영상은 기기 안에서만 처리하며 전송·저장하지 않습니다. 문의 seouljade@kma.ac.kr</p>
+    <p class="small">카메라 영상은 기기 안에서만 처리하며 전송·저장하지 않습니다. 문의 seouljade@kma.ac.kr · 버전 <span id="appVersion">1.9</span></p>
   </div>
 </footer>
 
