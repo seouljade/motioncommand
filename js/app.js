@@ -4,6 +4,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var INFO = MCGesture.INFO;
   var ROUTES = ['intro', 'setup', 'sim', 'review', 'learn', 'maker'];
+  var pendingJump = null; // 다른 화면으로 이동한 뒤 스크롤할 구역 id
   function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 
   var CARDS = [
@@ -26,7 +27,8 @@
     if (r === 'setup') envCheck();
     if (r === 'review') loadReview();
     var navOn = document.querySelector('.nav a.on'); if (navOn && navOn.scrollIntoView) navOn.scrollIntoView({ block: 'nearest', inline: 'center' });
-    window.scrollTo(0, 0);
+    var jt = pendingJump && $(pendingJump); pendingJump = null;
+    if (jt) jt.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0);
   }
 
   /* ── 수신호 카드 ───────────────────── */
@@ -231,7 +233,11 @@
       function sel() { var r = document.createRange(); r.selectNodeContents($('mailText')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
     });
     document.querySelectorAll('[data-jump]').forEach(function (a) {
-      a.addEventListener('click', function (e) { e.preventDefault(); var t = $(a.dataset.jump); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (a.hash && a.hash !== location.hash) { pendingJump = a.dataset.jump; location.hash = a.hash; return; }
+        var t = $(a.dataset.jump); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
   }
 
