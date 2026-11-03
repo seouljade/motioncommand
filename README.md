@@ -3,6 +3,8 @@
 카메라로 손 수신호를 인식해 드론을 조종하는 **제스처 기반 드론 통제 훈련체계**입니다.
 Army TIGER+ 유무인복합전투를 위한 Physical AI 시제품으로, 실기체 없이 3D 시뮬레이션으로 훈련하고 기록을 사후검토합니다.
 
+**체험하기: https://motioncommand.vercel.app**
+
 ![MotionCommand](assets/thumbnail.png)
 
 ## 주요 기능
