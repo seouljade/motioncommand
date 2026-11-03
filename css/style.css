@@ -5,7 +5,7 @@
   --surface: #f9faf6;
   --sunk: #e3e7de;
   --ink: #17201a;
-  --muted: #5b675e;
+  --muted: #485349;
   --line: #cdd4c8;
   --accent: #2f5d3a;
   --accent-ink: #ffffff;
@@ -28,7 +28,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1512; --surface: #161e19; --sunk: #1c2620; --ink: #e3e9e1; --muted: #9aa69c; --line: #2b372f;
+    --bg: #0f1512; --surface: #161e19; --sunk: #1c2620; --ink: #e3e9e1; --muted: #b0bbb2; --line: #2b372f;
     --accent: #86bd90; --accent-ink: #0f1512; --accent-soft: #22362a; --signal: #e0a447;
     --ok: #6cc489; --warn: #e0a447; --bad: #ec7b6e; --hand: #d9c9b1; --hand-line: #1b1510;
     --c1: #f08a5d; --c2: #6fa8e6; --c3: #6cc489; --c4: #b893d9; --c5: #e0a447;
@@ -36,7 +36,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f1512; --surface: #161e19; --sunk: #1c2620; --ink: #e3e9e1; --muted: #9aa69c; --line: #2b372f;
+  --bg: #0f1512; --surface: #161e19; --sunk: #1c2620; --ink: #e3e9e1; --muted: #b0bbb2; --line: #2b372f;
   --accent: #86bd90; --accent-ink: #0f1512; --accent-soft: #22362a; --signal: #e0a447;
   --ok: #6cc489; --warn: #e0a447; --bad: #ec7b6e; --hand: #d9c9b1; --hand-line: #1b1510;
   --c1: #f08a5d; --c2: #6fa8e6; --c3: #6cc489; --c4: #b893d9; --c5: #e0a447;
@@ -55,7 +55,8 @@ p { margin: 0; }
 .wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .small { font-size: 13px; color: var(--muted); }
 .mut { color: var(--muted); }
-.eyebrow { font: 600 12px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--signal); margin-bottom: 10px; }
+.eyebrow { display: flex; align-items: center; gap: 8px; font: 700 15px/1.2 var(--f-body); letter-spacing: .02em; color: var(--signal); margin-bottom: 10px; }
+.eyebrow::before { content: ""; width: 18px; height: 3px; border-radius: 2px; background: currentColor; flex: none; }
 kbd { font: 600 12px var(--f-mono); background: var(--sunk); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
 
 /* ── 상단 바 ── */
@@ -371,7 +372,9 @@ input[type="range"] { accent-color: var(--accent); width: 100%; }
 /* ── ⑥ 제작자 ── */
 .maker-card { max-width: 820px; padding: 32px; display: grid; gap: 18px; }
 .maker-id { display: flex; gap: 18px; align-items: center; }
-.avatar { width: 72px; height: 72px; border-radius: 16px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font: 400 34px var(--f-display); flex: none; }
+.avatar { width: 104px; height: 88px; border-radius: 16px; background: var(--accent); color: var(--accent-ink); display: grid; place-content: center; justify-items: center; gap: 4px; flex: none; }
+.avatar b { font: 700 32px/1 "Noto Serif KR", "Batang", "Malgun Gothic", serif; letter-spacing: .04em; }
+.avatar small { font-size: 11px; font-weight: 500; opacity: .9; white-space: nowrap; }
 .maker-id h2 { font: 400 32px var(--f-display); }
 .papers { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .papers li { display: grid; gap: 2px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--sunk); border-radius: 0 8px 8px 0; }
