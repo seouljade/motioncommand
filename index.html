@@ -296,6 +296,7 @@
         <p class="eyebrow">드론 교육훈련 사후검토</p>
         <h2>기록으로 습관을 고친다</h2>
         <p id="storeNote">기록 저장소 확인 중…</p>
+        <p class="privacy-note"><b>회차 재생 안내</b> 회차별 기록의 "다시 보기"는 저장된 위치·고도·인식된 수신호로 비행을 3D로 다시 그립니다. 카메라 영상은 개인정보 보호 원칙에 따라 저장하지 않으므로 재생하지 않습니다.</p>
       </div>
       <div class="seg" role="tablist" aria-label="보기 전환">
         <button type="button" role="tab" id="tabMe" aria-selected="true">개인</button>
@@ -493,6 +494,41 @@
 
 </main>
 
+<!-- 사후검토 회차 재생 -->
+<dialog class="replay" id="replayDlg" aria-labelledby="rpTitle">
+  <div class="rp-head">
+    <div>
+      <p class="eyebrow">회차 재생</p>
+      <h3 id="rpTitle">회차 재생</h3>
+      <p class="small" id="rpMeta"></p>
+    </div>
+    <button class="btn btn-sm" id="rpClose" type="button">닫기</button>
+  </div>
+  <p class="rp-msg" id="rpMsg"></p>
+  <div id="rpBody" hidden>
+    <div class="rp-grid">
+      <div class="rp-stage">
+        <canvas id="rpCanvas" aria-label="비행 궤적 3D 재생"></canvas>
+        <div class="hud rp-hud"><div><span>고도</span><b id="rpAlt">0.0</b><small>m</small></div><div><span>좌우</span><b id="rpX">0.0</b><small>m</small></div><div><span>상태</span><b id="rpState">-</b></div></div>
+        <p class="rp-tip">드래그해 시점 회전 · 더블클릭 초기화</p>
+      </div>
+      <aside class="rp-side">
+        <div class="rp-gesture" id="rpGesture"><div id="rpHand"></div><div><span class="small">당시 인식</span><b id="rpG">—</b><span class="small" id="rpGSign"></span></div></div>
+        <div><h4 class="h4">과제 단계</h4><ol class="rp-steps" id="rpSteps"></ol></div>
+        <div><h4 class="h4">이벤트 <span class="mut small">누르면 그 시점으로 이동</span></h4><ul class="rp-events" id="rpEvents"></ul></div>
+      </aside>
+    </div>
+    <div class="rp-controls">
+      <button class="btn btn-sm btn-primary" id="rpPlay" type="button">재생</button>
+      <label class="rp-speed">배속<select id="rpSpeed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+      <input type="range" id="rpSeek" min="0" max="1" step="0.1" value="0" aria-label="재생 위치">
+      <span class="rp-time" id="rpTime">T+0.0s</span>
+    </div>
+    <div class="rp-timeline"><div class="rp-bar" id="rpBar"></div><div class="rp-legend" id="rpLegend"></div></div>
+  </div>
+  <p class="rp-privacy">카메라 영상은 개인정보 보호 원칙에 따라 저장하지 않으므로 재생하지 않습니다. 저장된 위치·고도·인식된 수신호만으로 다시 그립니다.</p>
+</dialog>
+
 <footer class="foot">
   <div class="wrap">
     <p><b>MotionCommand</b> · 연구·교육용 시제품입니다. 실제 드론과 연동되어 있지 않으며, 실제 무기체계나 공식 교범이 아닙니다.</p>
@@ -510,6 +546,7 @@
 <script src="js/hands-svg.js"></script>
 <script src="js/store.js"></script>
 <script src="js/sim.js"></script>
+<script src="js/replay.js"></script>
 <script src="js/review.js"></script>
 <script src="js/app.js"></script>
 </body>

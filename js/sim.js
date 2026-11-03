@@ -11,7 +11,9 @@
     rotor: 0, edgeHit: false
   };
   var cam = { stream: null, on: false, model: 'idle', landmarker: null, lastT: -1, lastRes: null, lastSeen: 0, err: '' };
-  var input = { pad: null, usedPad: false, raw: { id: G.HOVER, conf: 0 }, active: G.HOVER };
+  var input = { pad: null, usedPad: false, raw: { id: G.HOVER, conf: 0 }, active: G.HOVER, shown: 'READY' };
+  var READY_KO = '준비 중';
+  var TRACK_DT = 0.2; // 재생용 궤적 기록 간격(초)
   var deb = new GS.Debouncer({ threshold: 0.7, holdScale: 1 });
   var mission = null; // 진행 중 미션
   var listeners = { status: [], finish: [], log: [] };
@@ -89,7 +91,7 @@
   /* ── 제스처 확정 이벤트 ─────────────── */
   deb.onConfirm = function (id) {
     var inf = INFO[id];
-    if (mission && mission.running) checkAllowed(id);
+    if (mission && mission.running) { mark({ k: 'g', g: id }); checkAllowed(id); }
     if (id === G.POWER_ON) {
       if (!S.power) { S.power = true; S.autoLand = false; log('전원 켜기 — 프로펠러 회전', 'ok'); toast('전원 켜짐', 'ok'); }
       else log('이미 전원이 켜져 있습니다', 'mute');
@@ -105,19 +107,28 @@
       else log(inf.ko + ' (' + inf.sign + ')');
     }
   };
-  deb.onBreak = function (id) { if (mission && mission.running) { mission.err.e2++; } };
+  deb.onBreak = function (id) { if (mission && mission.running) addErr('e2'); };
 
   function checkAllowed(id) {
     var st = mission.def.steps[mission.step];
     if (!st) return;
     if (id === G.POWER_OFF && S.alt > 0.05) return; // E3로 따로 기록
     if (st.allow.indexOf(id) < 0) {
-      mission.err.e1++;
+      addErr('e1');
       mission.confusions.push({ expected: st.allow[0], got: id, step: mission.step + 1 });
       log('과제와 다른 명령: ' + INFO[id].ko + ' (기대: ' + INFO[st.allow[0]].ko + ')', 'bad');
     }
   }
-  function addErr(k) { mission.err[k]++; }
+  function addErr(k) { mission.err[k]++; mark({ k: 'e', e: k }); }
+
+  /* ── 재생용 궤적 기록 ───────────────── */
+  // p: [시각, 좌우 x, 고도, 상태(1=전원, 2=자동착륙), 화면에 보인 수신호]
+  // ev: 수신호 확정(g)·실수(e)·단계 완료(s) 순간
+  function mark(ev) { ev.t = Math.round(mission.t * 10) / 10; mission.track.ev.push(ev); }
+  function sample() {
+    var r2 = function (v) { return Math.round(v * 100) / 100; };
+    mission.track.p.push([Math.round(mission.t * 10) / 10, r2(S.x), r2(S.alt), (S.power ? 1 : 0) | (S.autoLand ? 2 : 0), input.shown]);
+  }
 
   /* ── 3D ─────────────────────────────── */
   var R = { ok: false };
@@ -125,11 +136,8 @@
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return v || fallback;
   }
-  function init3D(canvas) {
-    if (!window.THREE) { $('no3d').hidden = false; return; }
-    var T = window.THREE;
-    var renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // 지면·경계·이착륙장·드론으로 된 3D 장면 (시뮬레이터와 사후검토 재생이 함께 사용)
+  function makeWorld(T) {
     var scene = new T.Scene();
     scene.background = new T.Color('#0d1410');
     scene.fog = new T.Fog('#0d1410', 14, 30);
@@ -183,7 +191,16 @@
     // 미션 표식
     var marks = new T.Group(); scene.add(marks);
 
-    R = { ok: true, T: T, renderer: renderer, scene: scene, camera: camera, drone: drone, rotors: rotors, led: led, shadow: shadow, marks: marks, yaw: 0, pitch: 0.32 };
+    return { scene: scene, camera: camera, drone: drone, rotors: rotors, led: led, shadow: shadow, marks: marks };
+  }
+
+  function init3D(canvas) {
+    if (!window.THREE) { $('no3d').hidden = false; return; }
+    var T = window.THREE;
+    var renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    var w = makeWorld(T);
+    R = { ok: true, T: T, renderer: renderer, scene: w.scene, camera: w.camera, drone: w.drone, rotors: w.rotors, led: w.led, shadow: w.shadow, marks: w.marks, yaw: 0, pitch: 0.32 };
     bindOrbit(canvas);
     resize3D();
     if (window.ResizeObserver) new ResizeObserver(resize3D).observe(canvas.parentElement);
@@ -212,7 +229,9 @@
 
   function buildMarks(code) {
     if (!R.ok) return;
-    var T = R.T, g = R.marks;
+    fillMarks(R.T, R.marks, code);
+  }
+  function fillMarks(T, g, code) {
     while (g.children.length) g.remove(g.children[0]);
     var amber = '#e0a447', green = '#7fb58a';
     function ring(y) {
@@ -300,7 +319,7 @@
     resetDrone(true);
     if (code === 'FREE') { mission = null; buildMarks(null); renderMissionHud(); log('자유비행 모드'); return; }
     mission = { def: def, code: code, trainee: trainee, running: true, t: 0, step: 0, stay: 0, absent: 0, absentCounted: false,
-      err: { e1: 0, e2: 0, e3: 0, e4: 0, e5: 0, e6: 0 }, confusions: [], usedPad: false };
+      err: { e1: 0, e2: 0, e3: 0, e4: 0, e5: 0, e6: 0 }, confusions: [], usedPad: false, track: { p: [], ev: [], next: 0 } };
     input.usedPad = false;
     buildMarks(code);
     renderMissionHud();
@@ -318,6 +337,7 @@
     if (!mission || !mission.running) return;
     mission.t += dt;
     if (input.pad) mission.usedPad = true;
+    if (mission.t >= mission.track.next) { sample(); mission.track.next += TRACK_DT; }
     var st = mission.def.steps[mission.step];
     if (st) {
       if (st.stay) {
@@ -339,6 +359,7 @@
 
   function advance() {
     mission.step++; mission.stay = 0;
+    mark({ k: 's', s: mission.step });
     var n = mission.def.steps[mission.step];
     if (n) { log('단계 완료 → ' + n.t, 'ok'); toast('단계 ' + mission.step + ' 완료', 'ok'); }
     else finish(true, '성공');
@@ -346,6 +367,7 @@
 
   function finish(success, reason) {
     var m = mission; m.running = false;
+    sample();
     var def = m.def, e = m.err;
     var accuracy = Math.max(0, 20 - 2 * (e.e1 + e.e3 + e.e4 + e.e6) - 2 * Math.floor(e.e2 / 3));
     var time = success ? Math.round(20 * Math.max(0, Math.min(1, (def.limit - m.t) / (def.limit * 0.6)))) : 0;
@@ -356,7 +378,8 @@
       success: success, score: score, duration_s: Math.round(m.t * 10) / 10,
       e1: e.e1, e2: e.e2, e3: e.e3, e4: e.e4, e5: e.e5, e6: e.e6,
       confusions: m.confusions.slice(0, 50), input_mode: (!cam.on || m.usedPad) ? 'keyboard' : 'camera',
-      device: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'pc'
+      device: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'pc',
+      track: { v: 1, dt: TRACK_DT, steps: def.steps.map(function (s) { return s.t; }), p: m.track.p, ev: m.track.ev }
     };
     log(def.title + ' 종료 — ' + reason + ' · ' + score + '점', success ? 'ok' : 'bad');
     toast(success ? '임무 성공 ' + score + '점' : reason, success ? 'ok' : 'bad');
@@ -499,8 +522,9 @@
   function renderReadout(raw, d) {
     var shown = d.cand || raw.id;
     var inf = INFO[shown] || INFO.HOVER;
-    $('gName').textContent = inf.ko;
-    $('gSign').textContent = shown === G.HOVER || shown === G.UNKNOWN ? '' : inf.sign;
+    // 손이 안 보이면 '정지' 명령이 아니라 대기 상태로 표시 (드론은 Fail-safe로 제자리 유지)
+    $('gName').textContent = raw.noHand ? READY_KO : inf.ko;
+    $('gSign').textContent = raw.noHand || shown === G.HOVER || shown === G.UNKNOWN ? '' : inf.sign;
     var conf = raw.id === G.HOVER ? 0 : raw.conf;
     $('gConf').style.width = Math.round(conf * 100) + '%';
     $('gConf').className = conf >= deb.threshold ? 'okc' : 'lowc';
@@ -526,11 +550,12 @@
       if (res && res.landmarks && res.landmarks.length) {
         var score = res.handedness && res.handedness[0] && res.handedness[0][0] ? res.handedness[0][0].score : 0.9;
         raw = GS.classify(res.landmarks[0], score); cam.lastSeen = now;
-      } else raw = { id: G.HOVER, conf: 0, detail: '손이 보이지 않음 → 정지' };
-    } else raw = { id: G.HOVER, conf: 0 };
+      } else raw = { id: G.HOVER, conf: 0, noHand: true, detail: '손이 보이지 않음 — 드론은 제자리 유지' };
+    } else raw = { id: G.HOVER, conf: 0, noHand: true };
     input.raw = raw;
     var d = deb.update(raw, now);
     input.active = d.active;
+    input.shown = raw.noHand ? 'READY' : (d.cand || raw.id);
     physics(dt, input.active);
     stepMission(dt);
     if (visible) { render3D(dt); if (frame % 2 === 0) renderReadout(raw, d); }
@@ -540,6 +565,7 @@
   /* ── 공개 API ───────────────────────── */
   window.MCSim = {
     MISSIONS: MISSIONS, state: S, cam: cam,
+    world: { make: makeWorld, marks: fillMarks },
     init: function () {
       logEl = $('log'); toastEl = $('toast');
       camCanvas = $('camCanvas'); camCtx = camCanvas.getContext('2d');

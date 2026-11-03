@@ -81,7 +81,7 @@
   }
 
   /* ── 개인 화면 ────────────────────── */
-  function renderMe(rows) {
+  function renderMe(rows, onReplay) {
     var n = rows.length;
     var scores = rows.map(function (r) { return r.score; });
     var pass = rows.filter(function (r) { return r.score >= 80; }).length;
@@ -101,12 +101,17 @@
     var h = habits(rows);
     $('habits').innerHTML = h.length ? h.map(function (x) { return '<li><div><b>' + esc(x.label) + '</b><em>' + x.n + '회</em></div><p>' + esc(x.tip) + '</p></li>'; }).join('')
       : '<li class="empty">' + (n ? '반복되는 실수가 없습니다. 잘하고 있습니다.' : '훈련 미션을 마치면 자주 하는 실수와 교정 방법이 여기에 나타납니다.') + '</li>';
-    var head = '<thead><tr><th>회차</th><th>일시</th><th>과제</th><th>결과</th><th class="num">점수</th><th class="num">시간</th><th>실수</th><th>입력</th></tr></thead>';
+    var head = '<thead><tr><th>회차</th><th>일시</th><th>과제</th><th>결과</th><th class="num">점수</th><th class="num">시간</th><th>실수</th><th>입력</th><th>재생</th></tr></thead>';
     var body = rows.slice().reverse().map(function (r, i) {
       var errs = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'].filter(function (k) { return r[k]; }).map(function (k) { return '<span class="tag" title="' + ERR[k].ko + '">' + k.toUpperCase() + '×' + r[k] + '</span>'; }).join('') || '<span class="mut">없음</span>';
-      return '<tr><td class="num">' + (n - i) + '</td><td>' + fmtDate(r.created_at) + '</td><td>' + esc(MNAME[r.mission] || r.mission) + '</td><td>' + (r.success ? '<span class="pill ok">성공</span>' : '<span class="pill bad">실패</span>') + '</td><td class="num"><b>' + r.score + '</b></td><td class="num">' + r.duration_s + 's</td><td>' + errs + '</td><td>' + (r.input_mode === 'camera' ? '카메라' : '수동') + '</td></tr>';
+      return '<tr><td class="num">' + (n - i) + '</td><td>' + fmtDate(r.created_at) + '</td><td>' + esc(MNAME[r.mission] || r.mission) + '</td><td>' + (r.success ? '<span class="pill ok">성공</span>' : '<span class="pill bad">실패</span>') + '</td><td class="num"><b>' + r.score + '</b></td><td class="num">' + r.duration_s + 's</td><td>' + errs + '</td><td>' + (r.input_mode === 'camera' ? '카메라' : '수동') + '</td><td>' +
+        (r.has_track || r.track ? '<button class="btn btn-sm" type="button" data-replay="' + (n - 1 - i) + '">다시 보기</button>' : '<span class="mut" title="재생 기능 추가 전 기록이거나 CSV로 가져온 기록">—</span>') + '</td></tr>';
     }).join('');
-    $('tblMe').innerHTML = head + '<tbody>' + (body || '<tr><td colspan="8" class="empty">아직 기록이 없습니다. 조작 시뮬레이션에서 훈련 과제를 수행해 보세요.</td></tr>') + '</tbody>';
+    $('tblMe').innerHTML = head + '<tbody>' + (body || '<tr><td colspan="9" class="empty">아직 기록이 없습니다. 조작 시뮬레이션에서 훈련 과제를 수행해 보세요.</td></tr>') + '</tbody>';
+    $('tblMe').querySelectorAll('[data-replay]').forEach(function (b) {
+      var k = +b.getAttribute('data-replay');
+      b.addEventListener('click', function () { if (onReplay) onReplay(rows[k], k + 1); });
+    });
   }
 
   /* ── 교관 화면 ────────────────────── */
@@ -156,7 +161,8 @@
         var score = Math.max(20, Math.min(98, Math.round((success ? 60 : 18) + skill * 26 - e1 * 2 - e3 * 2)));
         var conf = [];
         for (var k = 0; k < e1; k++) conf.push(pi === 0 ? { expected: 'UP', got: 'LEFT' } : pi === 1 ? { expected: 'POWER_OFF', got: 'DOWN' } : { expected: 'DOWN', got: 'POWER_OFF' });
-        out.push({ id: 'sample-' + pi + '-' + i, created_at: new Date(t0 + (i * 3 + pi) * 3600e3).toISOString(), rank: p[0], name: p[1], mission: m, success: success, score: score, duration_s: Math.round(30 + (1 - skill) * 60), e1: e1, e2: e2, e3: e3, e4: i === 2 ? 1 : 0, e5: success ? 0 : 1, e6: 0, confusions: conf, input_mode: 'camera', device: 'pc' });
+        var track = window.MCReplay ? MCReplay.synth(m, { success: success, e1: Math.min(e1, 2), seed: pi * 31 + i * 7 + 3 }) : null;
+        out.push({ track: track, has_track: !!track, id: 'sample-' + pi + '-' + i, created_at: new Date(t0 + (i * 3 + pi) * 3600e3).toISOString(), rank: p[0], name: p[1], mission: m, success: success, score: score, duration_s: track ? track.p[track.p.length - 1][0] : Math.round(30 + (1 - skill) * 60), e1: e1, e2: e2, e3: e3, e4: i === 2 ? 1 : 0, e5: success ? 0 : 1, e6: 0, confusions: conf, input_mode: 'camera', device: 'pc' });
       });
     });
     return out;

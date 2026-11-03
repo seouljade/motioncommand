@@ -14,7 +14,7 @@
     { id: 'LEFT', how: '검지만 펴서 내 왼쪽을 가리킨다. 손등이 카메라를 향해도 된다.', act: '초속 2m로 왼쪽으로 이동한다.', miss: '중지가 같이 펴지면 판정 불가. 화면은 거울처럼 보이므로 내 기준 왼쪽을 가리키면 된다.' },
     { id: 'RIGHT', how: '검지만 펴서 내 오른쪽을 가리킨다.', act: '초속 2m로 오른쪽으로 이동한다.', miss: '검지가 위로 들리면(수직에 가까우면) 판정 불가. 수평으로 가리킨다.' },
     { id: 'POWER_OFF', how: '다섯 손가락을 펴고 손바닥이 바닥을 향하도록 손을 수평으로 눕힌다.', act: '지상에서는 전원 차단. 공중이면 자동 착륙한 뒤 전원을 끈다.', miss: '손을 세우면 손바닥 정면(명령 없음)으로 판정된다. 비행 중 사용은 실수로 기록된다.' },
-    { id: 'HOVER', how: '손을 카메라 화면 밖으로 뺀다. 애매한 손 모양도 정지로 처리된다.', act: '그 자리에 멈춰 호버링한다.', miss: '명령과 명령 사이에는 손을 빼는 습관이 가장 안전하다.' }
+    { id: 'HOVER', how: '손을 카메라 화면 밖으로 뺀다. 화면에는 "준비 중"으로 표시된다. 애매한 손 모양도 정지로 처리된다.', act: '그 자리에 멈춰 호버링한다.', miss: '명령과 명령 사이에는 손을 빼는 습관이 가장 안전하다.' }
   ];
 
   /* ── 라우팅 ───────────────────────── */
@@ -190,7 +190,7 @@
     $('tabMe').setAttribute('aria-selected', RV.tab === 'me'); $('tabAll').setAttribute('aria-selected', RV.tab === 'all');
     $('reviewMe').hidden = RV.tab !== 'me'; $('reviewAll').hidden = RV.tab !== 'all';
     $('pickWrap').hidden = RV.tab !== 'me';
-    if (RV.tab === 'me') MCReview.renderMe(rows.filter(function (r) { return MCReview.key(r) === RV.pick; }));
+    if (RV.tab === 'me') MCReview.renderMe(rows.filter(function (r) { return MCReview.key(r) === RV.pick; }), function (r, num) { MCReplay.open(r, num, MCStore.getTrack(r)); });
     else MCReview.renderAll(rows, function (n) { RV.pick = n; RV.tab = 'me'; renderReview(); });
   }
   function setupReview() {

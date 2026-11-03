@@ -18,8 +18,14 @@ create table if not exists public.mc_attempts (
   e6 smallint not null default 0,  -- 손 인식 이탈
   confusions   jsonb not null default '[]'::jsonb,  -- [{expected, got}]
   input_mode   text not null default 'camera' check (input_mode in ('camera','keyboard')),
-  device       text
+  device       text,
+  track        jsonb  -- 사후검토 3D 재생용 비행 궤적·수신호 기록 (카메라 영상은 저장하지 않음)
 );
+
+-- 이전 버전에서 만든 테이블에도 재생용 칸 추가
+alter table public.mc_attempts add column if not exists track jsonb;
+alter table public.mc_attempts drop constraint if exists mc_attempts_track_size;
+alter table public.mc_attempts add constraint mc_attempts_track_size check (track is null or pg_column_size(track) < 200000);
 
 create index if not exists mc_attempts_created_idx on public.mc_attempts (created_at desc);
 create index if not exists mc_attempts_trainee_idx on public.mc_attempts (rank, name);

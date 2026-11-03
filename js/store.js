@@ -37,32 +37,56 @@
       e1: +r.e1 || 0, e2: +r.e2 || 0, e3: +r.e3 || 0, e4: +r.e4 || 0, e5: +r.e5 || 0, e6: +r.e6 || 0,
       confusions: Array.isArray(r.confusions) ? r.confusions : (function () { try { return JSON.parse(r.confusions || '[]'); } catch (e) { return []; } })(),
       input_mode: r.input_mode === 'keyboard' ? 'keyboard' : 'camera',
-      device: r.device || ''
+      device: r.device || '',
+      track: parseTrack(r.track),
+      has_track: !!(r.has_track || r.track)
     };
+  }
+  function parseTrack(t) {
+    if (!t) return null;
+    if (typeof t === 'string') { try { t = JSON.parse(t); } catch (e) { return null; } }
+    return t && Array.isArray(t.p) ? t : null;
   }
 
   function add(attempt) {
     var row = normalize(attempt);
     if (mode === 'supabase') {
-      var payload = Object.assign({}, row); delete payload.id; delete payload.created_at;
+      var payload = Object.assign({}, row); delete payload.id; delete payload.created_at; delete payload.has_track;
       return client.from(CFG.TABLE).insert(payload).then(function (res) {
         if (res.error) throw res.error;
         return { ok: true, where: 'supabase', row: row };
       }).catch(function (e) {
         lastError = String(e.message || e);
-        var all = lsGet(LOCAL_KEY); all.push(row); lsSet(LOCAL_KEY, all);
+        saveLocal(row);
         return { ok: true, where: 'local-fallback', row: row, error: lastError };
       });
     }
-    var all = lsGet(LOCAL_KEY); all.push(row); lsSet(LOCAL_KEY, all);
+    saveLocal(row);
     return Promise.resolve({ ok: true, where: 'local', row: row });
+  }
+  // 기기 저장 공간이 부족하면 궤적만 빼고 점수 기록은 지킨다
+  function saveLocal(row) {
+    var all = lsGet(LOCAL_KEY); all.push(row);
+    if (lsSet(LOCAL_KEY, all)) return;
+    all[all.length - 1] = Object.assign({}, row, { track: null, has_track: false });
+    lsSet(LOCAL_KEY, all);
+  }
+
+  // 재생용 궤적: 목록에는 싣지 않고 다시 보기를 누를 때 그 회차만 불러온다
+  function getTrack(row) {
+    if (row.track) return Promise.resolve(row.track);
+    if (row._src !== 'supabase' || !client) return Promise.resolve(null);
+    return client.from(CFG.TABLE).select('track').eq('id', row.id).single().then(function (res) {
+      if (res.error) throw res.error;
+      return parseTrack(res.data && res.data.track);
+    });
   }
 
   function list() {
     var local = lsGet(LOCAL_KEY).map(function (r) { r._src = 'local'; return r; });
     var imported = lsGet(IMPORT_KEY).map(function (r) { r._src = 'import'; return r; });
     if (mode !== 'supabase') return Promise.resolve(local.concat(imported));
-    return client.from(CFG.TABLE).select('*').order('created_at', { ascending: true }).limit(5000).then(function (res) {
+    return client.from(CFG.TABLE).select(FIELDS.join(',') + ',has_track:track->v').order('created_at', { ascending: true }).limit(5000).then(function (res) {
       if (res.error) throw res.error;
       var remote = res.data.map(function (r) { var n = normalize(r); n._src = 'supabase'; return n; });
       return remote.concat(local, imported);
@@ -113,7 +137,7 @@
   }
 
   window.MCStore = {
-    init: init, add: add, list: list, toCSV: toCSV, parseCSV: parseCSV, importRows: importRows,
+    init: init, add: add, list: list, getTrack: getTrack, toCSV: toCSV, parseCSV: parseCSV, importRows: importRows,
     get mode() { return mode; }, get lastError() { return lastError; }
   };
 })();
