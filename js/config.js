@@ -7,8 +7,8 @@
  *   SUPABASE_ANON_KEY : anon public key (공개용 키. service_role 키는 절대 넣지 마세요)
  */
 window.MC_CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: 'https://cddqoefwsiiepfjsgyuo.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkZHFvZWZ3c2lpZXBmanNneXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3MDMwMTIsImV4cCI6MjEwOTI3OTAxMn0.H0HWMNR2KM-s16oWmkmlR9xwO-2zBvR4SOwKUzydmIk',
   TABLE: 'mc_attempts',
 
   // 손 인식 모델 (MediaPipe Tasks Vision)
