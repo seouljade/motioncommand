@@ -17,6 +17,8 @@
     DOWN: '엄지 아래로 잘못 인식됐습니다. 엄지 방향이 수직 ±45° 안에 들어가지 않도록 주의하세요.',
     LEFT: '검지 왼쪽으로 잘못 인식됐습니다. 가리킬 때가 아니면 검지를 접으세요.',
     RIGHT: '검지 오른쪽으로 잘못 인식됐습니다. 가리킬 때가 아니면 검지를 접으세요.',
+    FORWARD: '숫자 1(전진)로 잘못 인식됐습니다. 좌우를 가리킬 때는 검지를 수평으로 눕히고, 명령이 아니면 검지를 접으세요.',
+    BACK: '숫자 2(후진)로 잘못 인식됐습니다. 손을 펴거나 쥐는 중에는 검지·중지만 세워진 모양으로 멈추지 마세요.',
     POWER_ON: '엄지와 검지 끝이 닿아 OK로 인식됐습니다. 두 손가락 사이를 띄우세요.',
     POWER_OFF: '손을 펴서 눕히는 동작이 전원 끄기로 인식됐습니다. 명령 사이에는 손을 화면 밖으로 빼세요.'
   };
@@ -91,6 +93,7 @@
       kpi('훈련 횟수', n + '회') +
       kpi('평균 점수', n ? Math.round(avg(scores)) + '점' : '-') +
       kpi('합격률', n ? pct(pass / n) : '-', '80점 이상') +
+      kpi('평균 소요 시간', n ? (Math.round(avg(rows.map(function (r) { return r.duration_s; })) * 10) / 10) + '초' : '-') +
       kpi('최근 점수', lastS != null ? lastS + '점' : '-', delta != null ? (delta >= 0 ? '▲ ' : '▼ ') + Math.abs(delta) + '점 (직전 대비)' : '', delta != null ? (delta >= 0 ? 'up' : 'down') : '');
     $('chartTrend').innerHTML = trendChart(rows);
     $('chartMission').innerHTML = barChart(['M1', 'M2', 'M3', 'M4', 'M5'].map(function (m) {
@@ -151,7 +154,8 @@
     $('chartErr').innerHTML = barChart(Object.keys(errTot).map(function (k) { return { label: k.toUpperCase() + ' ' + ERR[k].ko, v: errTot[k], cls: k === 'e3' ? 'bad' : 'warn' }; }));
     $('chartMissionAll').innerHTML = barChart(['M1', 'M2', 'M3', 'M4', 'M5'].map(function (m) {
       var a = rows.filter(function (r) { return r.mission === m; });
-      return { label: m, v: a.length ? avg(a.map(function (r) { return r.score; })) : 0, txt: a.length ? Math.round(avg(a.map(function (r) { return r.score; }))) + '점 · ' + a.length + '회' : '미실시', cls: 'acc' };
+      var ok = a.filter(function (r) { return r.success; }).length;
+      return { label: m, v: a.length ? avg(a.map(function (r) { return r.score; })) : 0, txt: a.length ? Math.round(avg(a.map(function (r) { return r.score; }))) + '점 · 성공 ' + pct(ok / a.length) + ' · ' + a.length + '회' : '미실시', cls: 'acc' };
     }), { max: 100 });
     var head = '<thead><tr><th>훈련자</th><th class="num">횟수</th><th class="num">평균</th><th class="num">최고</th><th class="num">합격률</th><th>최근 훈련</th><th>주요 습관</th><th></th></tr></thead>';
     var body = names.sort(function (a, b) { return avg(groups[b].map(function (r) { return r.score; })) - avg(groups[a].map(function (r) { return r.score; })); }).map(function (nm) {

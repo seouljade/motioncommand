@@ -253,7 +253,7 @@
       base.rotation.x = -Math.PI / 2; base.position.set(x, 0.015, z); g.add(base);
     }
     function box() {
-      var geo = new T.EdgesGeometry(new T.BoxGeometry(2, 1, 1.6));
+      var geo = new T.EdgesGeometry(new T.BoxGeometry(2, 1, 2));
       var m = new T.LineSegments(geo, new T.LineBasicMaterial({ color: amber }));
       m.position.set(0, 3, 0); m.userData.kind = 'box'; g.add(m);
     }

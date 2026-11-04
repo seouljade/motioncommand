@@ -34,6 +34,7 @@ js/review.js          사후검토 차트·습관 분석
 js/replay.js          사후검토 회차 3D 재생
 js/app.js             화면 전환, 환경 점검, 매뉴얼
 supabase/schema.sql   기록 테이블 + 보안 정책
+tools/serve.js        로컬 미리보기 서버
 assets/               엠블럼, 썸네일, 스크린샷
 docs/PRD.md           제품 요구사항 문서
 docs/GALLERY.md       갤러리 등록 문안
@@ -74,7 +75,7 @@ docs/GALLERY.md       갤러리 등록 문안
 카메라는 `https://` 또는 `http://localhost`에서만 동작합니다.
 
 ```bash
-python3 -m http.server 8000
+node tools/serve.js . 8000
 # 브라우저에서 http://localhost:8000
 ```
 

@@ -86,9 +86,10 @@
     var local = lsGet(LOCAL_KEY).map(function (r) { r._src = 'local'; return r; });
     var imported = lsGet(IMPORT_KEY).map(function (r) { r._src = 'import'; return r; });
     if (mode !== 'supabase') return Promise.resolve(local.concat(imported));
-    return client.from(CFG.TABLE).select(FIELDS.join(',') + ',has_track:track->v').order('created_at', { ascending: true }).limit(5000).then(function (res) {
+    return client.from(CFG.TABLE).select(FIELDS.join(',') + ',has_track:track->v').order('created_at', { ascending: false }).limit(5000).then(function (res) {
       if (res.error) throw res.error;
-      var remote = res.data.map(function (r) { var n = normalize(r); n._src = 'supabase'; return n; });
+      // 서버 조회 한도에 걸려도 최신 기록이 남도록 최신순으로 받아 시간순으로 되돌린다
+      var remote = res.data.slice().reverse().map(function (r) { var n = normalize(r); n._src = 'supabase'; return n; });
       return remote.concat(local, imported);
     }).catch(function (e) {
       lastError = String(e.message || e);
